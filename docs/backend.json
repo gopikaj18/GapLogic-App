@@ -1,0 +1,66 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Basic information about a GapLogic user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "object", "description": "Firestore server timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Intention": {
+      "title": "Intention",
+      "description": "A user's planned habit or goal.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["health", "work", "learning", "personal"] },
+        "effortEstimate": { "type": "number", "description": "1-5 intensity scale" },
+        "scheduledTime": { "type": "string", "description": "HH:MM format" },
+        "estimatedDuration": { "type": "number", "description": "Duration in minutes" },
+        "date": { "type": "string", "description": "YYYY-MM-DD format" },
+        "createdAt": { "type": "object", "description": "Firestore server timestamp" }
+      },
+      "required": ["title", "category", "effortEstimate", "scheduledTime", "date"]
+    },
+    "RealityLog": {
+      "title": "RealityLog",
+      "description": "The recorded outcome of a planned intention.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "intentionId": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "actualEffort": { "type": "number", "description": "1-5 intensity scale" },
+        "frictionNote": { "type": "string" },
+        "contextNote": { "type": "string" },
+        "date": { "type": "string", "description": "YYYY-MM-DD format" },
+        "createdAt": { "type": "object", "description": "Firestore server timestamp" }
+      },
+      "required": ["intentionId", "completed", "actualEffort", "date"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Root user document."
+    },
+    "/users/{userId}/intentions/{intentionId}": {
+      "schema": "Intention",
+      "description": "User specific collection of goals and intentions."
+    },
+    "/users/{userId}/realityLogs/{logId}": {
+      "schema": "RealityLog",
+      "description": "User specific collection of actual behavioral outcomes."
+    }
+  }
+}

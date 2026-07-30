@@ -1,0 +1,34 @@
+{
+  "login_payloads": [
+    {
+      "email": "load_user_1@example.com",
+      "password": "password123"
+    },
+    {
+      "email": "load_user_2@example.com",
+      "password": "password123"
+    }
+  ],
+  "intention_payloads": [
+    {
+      "title": "🏋️‍♂️ Core Strength Training",
+      "category": "personal",
+      "duration": "45"
+    },
+    {
+      "title": "📚 Study Rust Programming",
+      "category": "work",
+      "duration": "60"
+    },
+    {
+      "title": "🧘 Mindfulness Meditation",
+      "category": "health",
+      "duration": "15"
+    },
+    {
+      "title": "💻 Code Review Session",
+      "category": "work",
+      "duration": "30"
+    }
+  ]
+}

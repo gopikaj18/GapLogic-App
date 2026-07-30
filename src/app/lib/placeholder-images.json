@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-analytics",
+      "description": "Abstract data visualization showing growth and focus",
+      "imageUrl": "https://picsum.photos/seed/gaplogic1/1200/800",
+      "imageHint": "abstract data"
+    },
+    {
+      "id": "mindfulness-focus",
+      "description": "Calm workspace with a laptop and notebook",
+      "imageUrl": "https://picsum.photos/seed/gaplogic2/800/600",
+      "imageHint": "minimalist workspace"
+    }
+  ]
+}
