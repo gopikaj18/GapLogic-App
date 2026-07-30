@@ -54,3 +54,9 @@ mobile/dist/
 /apks/
 /.modified
 /winget_node_search.txt
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
