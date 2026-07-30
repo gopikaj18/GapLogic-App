@@ -1,4 +1,4 @@
-name: API & Robustness QA Test Suite
+name: updated test suite - app test
 
 on:
   push:

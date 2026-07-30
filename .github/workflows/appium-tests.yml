@@ -1,4 +1,4 @@
-name: Appium E2E Mobile QA Test Suite
+name: updated test suite - appium
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Selenium Web E2E Test Suite
+name: updated test suite - selenium
 
 on:
   push:

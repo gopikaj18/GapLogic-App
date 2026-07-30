@@ -1,4 +1,4 @@
-name: Baseline Load Testing Suite
+name: updated test suite - load
 
 on:
   push:
