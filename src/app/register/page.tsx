@@ -35,6 +35,17 @@ export default function RegisterPage() {
             setGoogleLoading(true);
             await loginWithGoogle(result.user.email, result.user.displayName || 'Google User');
             toast({ title: 'Success', description: 'Logged in with Google!' });
+            
+            // Check if we came from Android app
+            const params = new URLSearchParams(window.location.search);
+            const platform = params.get('platform');
+            if (platform === 'android') {
+              const token = localStorage.getItem('gaplogic_token');
+              if (token) {
+                window.location.href = `gaplogic://auth?token=${token}`;
+                return;
+              }
+            }
             router.push('/');
           }
         })
@@ -68,13 +79,28 @@ export default function RegisterPage() {
         (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android);
 
       if (isWebView) {
-        await signInWithRedirect(auth, googleProvider);
+        // Redirect to external browser via custom Android intercept scheme
+        const authUrl = `${window.location.origin}/register?platform=android`;
+        window.location.href = `gaplogic-open-browser://${authUrl}`;
+        setGoogleLoading(false);
+        return;
       } else {
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
         if (user && user.email) {
           await loginWithGoogle(user.email, user.displayName || 'Google User');
           toast({ title: 'Success', description: 'Logged in with Google!' });
+          
+          // Check if we came from Android app
+          const params = new URLSearchParams(window.location.search);
+          const platform = params.get('platform');
+          if (platform === 'android') {
+            const token = localStorage.getItem('gaplogic_token');
+            if (token) {
+              window.location.href = `gaplogic://auth?token=${token}`;
+              return;
+            }
+          }
           router.push('/');
         } else {
           throw new Error('Google account credentials not found');
@@ -98,6 +124,16 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|org)$/;
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Email Format',
+        description: 'Email must be in a valid format ending with .com or .org',
+      });
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       toast({

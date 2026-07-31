@@ -24,6 +24,13 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|org)$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: 'Email must be in a valid format ending with .com or .org' },
+        { status: 400 }
+      );
+    }
     const existing = await getUserByEmail(normalizedEmail);
     if (existing) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 });

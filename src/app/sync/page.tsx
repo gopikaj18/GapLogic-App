@@ -139,9 +139,69 @@ export default function FocusTimer() {
         contextNote: feedback.contextNote,
         date: today,
       });
+      // Update intention status based on the task status lifecycle
+      if (activeIntention.status === 'rescheduled') {
+        await apiFetch('/api/intentions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: activeIntention.id,
+            status: feedback.completed ? 'recovered' : 'missed',
+            recovered: feedback.completed ? true : undefined
+          })
+        });
+      } else {
+        await apiFetch('/api/intentions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: activeIntention.id,
+            status: feedback.completed ? 'completed' : 'missed'
+          })
+        });
+      }
+      // Log Trust credits/debits based on outcome
+      let trustReward = 0;
+      let transactionType: 'deposit' | 'withdrawal' = 'deposit';
+      let description = '';
+
+      if (feedback.completed) {
+        if (activeIntention.status === 'rescheduled') {
+          trustReward = 5;
+          transactionType = 'deposit';
+          description = `Completed Rescheduled Intention: ${activeIntention.title}`;
+        } else {
+          trustReward = 10;
+          transactionType = 'deposit';
+          description = `Completed Intention: ${activeIntention.title}`;
+        }
+      } else {
+        if (activeIntention.status === 'rescheduled') {
+          trustReward = -15;
+          transactionType = 'withdrawal';
+          description = `Missed Rescheduled Intention: ${activeIntention.title}`;
+        } else {
+          trustReward = -10;
+          transactionType = 'withdrawal';
+          description = `Missed Intention: ${activeIntention.title}`;
+        }
+      }
+
+      await apiFetch('/api/trust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: trustReward,
+          type: transactionType,
+          description: description,
+          date: today
+        })
+      });
+
       await refresh();
 
-      toast({ title: "Reality Synced", description: "Outcome recorded in behavioral history." });
+      const toastPrefix = trustReward >= 0 ? `+${trustReward}` : `${trustReward}`;
+      toast({ title: `Reality Synced (${toastPrefix} Self-Trust)`, description: "Outcome recorded in behavioral history." });
       setActiveIntention(null);
       setIsCompleted(false);
       setPrediction(null);
@@ -363,9 +423,17 @@ export default function FocusTimer() {
                             {log ? (log.completed ? <CheckCircle2 className="w-5 h-5 md:w-8 md:h-8" /> : <XCircle className="w-5 h-5 md:w-8 md:h-8" />) : <Play className="w-5 h-5 md:w-8 md:h-8" />}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-0.5">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
                               <Badge variant="outline" className="text-[7px] md:text-[8px] uppercase font-bold py-0 h-3 border-none bg-secondary/50">{item.category}</Badge>
                               <span className="text-[7px] md:text-[8px] text-muted-foreground font-bold tracking-widest uppercase">{item.estimatedDuration}M Duration</span>
+                              {item.scheduledTime && (
+                                <span className="text-[7px] md:text-[8px] text-muted-foreground font-bold tracking-widest uppercase">@ {item.scheduledTime}</span>
+                              )}
+                              {(item.status === 'rescheduled' || item.status === 'recovered' || item.was_recovered) && (
+                                <Badge className="text-[7px] md:text-[8px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 font-bold uppercase tracking-wider rounded-md">
+                                  🔄 Rescheduled
+                                </Badge>
+                              )}
                             </div>
                             <h4 className="font-bold text-base md:text-2xl tracking-tight truncate">{item.title}</h4>
                           </div>
@@ -378,9 +446,15 @@ export default function FocusTimer() {
                           <div className="flex-shrink-0">
                             <Badge className={cn(
                               "border-none px-3 md:px-6 h-8 md:h-10 font-bold uppercase text-[7px] md:text-[10px] tracking-widest rounded-lg md:rounded-xl",
-                              log.completed ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+                              log.completed 
+                                ? (item.status === 'recovered' || item.recovered 
+                                    ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20" 
+                                    : "bg-emerald-500/10 text-emerald-500") 
+                                : "bg-destructive/10 text-destructive"
                             )}>
-                              {log.completed ? 'Completed' : 'Missed'}
+                              {log.completed 
+                                ? (item.status === 'recovered' || item.recovered ? 'Recovered ✅' : 'Completed') 
+                                : 'Missed'}
                             </Badge>
                           </div>
                         )}

@@ -4,32 +4,74 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/lib/SessionContext';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   PlusSquare,
   Timer,
   BarChart3,
-  LogOut
+  ShieldCheck,
+  Coins,
+  BookOpen,
+  Activity,
+  CalendarDays,
+  LogOut,
+  Newspaper,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const navItems = [
+const desktopNavItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Modeler', href: '/modeler', icon: PlusSquare },
   { name: 'Focus', href: '/sync', icon: Timer },
+  { name: 'Recovery', href: '/recovery', icon: Activity },
+  { name: 'Integrity', href: '/integrity', icon: ShieldCheck },
+  { name: 'Trust Bank', href: '/trust-bank', icon: Coins },
+  { name: 'Journal', href: '/journal', icon: BookOpen },
+  { name: 'Weekly Review', href: '/weekly-review', icon: CalendarDays },
   { name: 'Analysis', href: '/insights', icon: BarChart3 },
+  { name: 'Content', href: '/content', icon: Newspaper },
+];
+
+const mobileNavItems = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Modeler', href: '/modeler', icon: PlusSquare },
+  { name: 'Trust Bank', href: '/trust-bank', icon: Coins },
+  { name: 'Focus', href: '/sync', icon: Timer },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const { user, logout } = useSession();
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    const isLight = document.documentElement.classList.contains('light');
+    setTheme(isLight ? 'light' : 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('gaplogic-theme', 'light');
+      setTheme('light');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('gaplogic-theme', 'dark');
+      setTheme('dark');
+    }
+  };
 
   return (
     <>
       <nav className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 border-r border-border bg-card z-50 p-6 flex-col overflow-y-auto scrollbar-none">
-        <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
+        <div className="flex items-center gap-3 mb-8 px-2 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <BarChart3 className="w-5 h-5 text-primary-foreground" />
+            <ShieldCheck className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold tracking-tight">GapLogic</span>
         </div>
@@ -40,7 +82,7 @@ export function Navigation() {
               {user.name}
             </p>
           )}
-          {navItems.map((item) => {
+          {desktopNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             return (
@@ -61,20 +103,31 @@ export function Navigation() {
           })}
         </div>
 
-        {user && (
+        <div className="pt-4 border-t border-border mt-4 flex flex-col gap-1.5 flex-shrink-0">
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground"
-            onClick={() => logout()}
+            className="w-full justify-start gap-3 text-muted-foreground hover:bg-secondary"
+            onClick={toggleTheme}
           >
-            <LogOut className="w-4 h-4" />
-            Sign out
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </Button>
-        )}
+
+          {user && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-muted-foreground hover:bg-secondary hover:text-destructive"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4" />
+              Sign out
+            </Button>
+          )}
+        </div>
       </nav>
 
       <nav className="md:hidden fixed bottom-4 left-4 right-4 h-16 bg-card/85 backdrop-blur-md border border-border/80 rounded-2xl shadow-xl z-50 flex items-center justify-around px-2">
-        {navItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -91,6 +144,15 @@ export function Navigation() {
             </Link>
           );
         })}
+        
+        <button
+          onClick={toggleTheme}
+          className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all active:scale-95 duration-150 text-muted-foreground"
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-400" />}
+          <span className="text-[10px] font-bold uppercase tracking-wider">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+        </button>
+
         {user && (
           <button
             onClick={() => logout()}
@@ -104,3 +166,4 @@ export function Navigation() {
     </>
   );
 }
+

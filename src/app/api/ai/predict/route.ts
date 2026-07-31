@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
       getIntentions(user.id),
     ]);
 
+    if (logs.length < 5) {
+      return NextResponse.json({ error: 'Sufficient historical data is not available. Minimum 5 tasks required.' }, { status: 400 });
+    }
+
     const history = logs.slice(0, 30).map((log) => {
       const relatedIntention = intentions.find((i) => i.id === log.intentionId);
       return {

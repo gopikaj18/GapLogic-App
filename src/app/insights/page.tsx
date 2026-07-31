@@ -202,13 +202,30 @@ export default function Analysis() {
 
   // Completion Status Data for Pie Chart
   const completionData = useMemo(() => {
-    const completed = logs.filter(l => l.completed).length;
-    const missed = logs.filter(l => !l.completed).length;
+    const resolvedIntentions = intentions.map(intention => {
+      const log = logs.find(l => l.intentionId === intention.id && (l.completed || l.date === intention.date));
+      
+      let status: 'completed' | 'missed' | 'skipped' | 'pending' | 'recovered' | 'rescheduled' = 'pending';
+      if (intention.skipped || intention.status === 'skipped') status = 'skipped';
+      else if (intention.status === 'recovered' || intention.recovered) status = 'recovered';
+      else if (intention.status === 'rescheduled') status = 'rescheduled';
+      else if (log) status = log.completed ? 'completed' : 'missed';
+      else if (intention.status === 'missed') status = 'missed';
+      else status = (intention.status as any) || 'pending';
+
+      return { ...intention, status };
+    });
+
+    const completed = resolvedIntentions.filter(i => i.status === 'completed').length;
+    const missed = resolvedIntentions.filter(i => i.status === 'missed').length;
+    const recovered = resolvedIntentions.filter(i => i.status === 'recovered').length;
+
     return [
       { name: 'Completed', value: completed, fill: '#10b981' },
-      { name: 'Missed', value: missed, fill: '#ef4444' }
+      { name: 'Missed', value: missed, fill: '#ef4444' },
+      { name: 'Recovered', value: recovered, fill: '#9ca3af' }
     ];
-  }, [logs]);
+  }, [intentions, logs]);
 
   // Diagnostic Pattern Logic
   const diagnostics = useMemo(() => {
@@ -333,102 +350,7 @@ export default function Analysis() {
               </Card>
             </div>
 
-            {/* ML Behavioral Drivers Section */}
-            {aiInsights?.modelInfo && (
-              <Card className="clean-card p-8 mb-12 shadow-sm border border-border/50 bg-card">
-                <div className="flex items-center gap-3 mb-6 border-b pb-4">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold tracking-tight">Mathematical Behavioral Drivers</h3>
-                    <p className="text-xs text-muted-foreground">Trained coefficients (weights) of your local Logistic Regression model.</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Weight 0: Effort Sensitivity */}
-                  <div className="border rounded-2xl p-5 bg-background flex flex-col justify-between space-y-4 shadow-sm hover:border-primary/20 transition-all">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Effort Sensitivity</span>
-                        <Badge variant="outline" className={cn("text-[10px] font-bold tracking-wider px-2", 
-                          aiInsights.modelInfo.weights[0] < 0 ? "border-destructive/20 text-destructive bg-destructive/5" : "border-emerald-200 text-emerald-600 bg-emerald-50"
-                        )}>
-                          {aiInsights.modelInfo.weights[0].toFixed(2)}
-                        </Badge>
-                      </div>
-                      <h4 className="text-sm font-bold text-foreground pt-1">Scaling Resistance</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Measures how task size deters you. {aiInsights.modelInfo.weights[0] < 0 
-                          ? "Higher effort estimates negatively impact your completion chance." 
-                          : "You maintain completion rates even as task size increases."}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Weight 1: Habit Consistency */}
-                  <div className="border rounded-2xl p-5 bg-background flex flex-col justify-between space-y-4 shadow-sm hover:border-primary/20 transition-all">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Habit Strength</span>
-                        <Badge variant="outline" className={cn("text-[10px] font-bold tracking-wider px-2", 
-                          aiInsights.modelInfo.weights[1] >= 0.3 ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-amber-200 text-amber-600 bg-amber-50"
-                        )}>
-                          {aiInsights.modelInfo.weights[1].toFixed(2)}
-                        </Badge>
-                      </div>
-                      <h4 className="text-sm font-bold text-foreground pt-1">Category Consistency</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        How much history guides current actions. {aiInsights.modelInfo.weights[1] >= 0.3
-                          ? "Your category history heavily controls your performance."
-                          : "Your performance is fluid across different domains."}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Weight 2: Temporal Success Rate */}
-                  <div className="border rounded-2xl p-5 bg-background flex flex-col justify-between space-y-4 shadow-sm hover:border-primary/20 transition-all">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Temporal Bias</span>
-                        <Badge variant="outline" className={cn("text-[10px] font-bold tracking-wider px-2", 
-                          aiInsights.modelInfo.weights[2] >= 0.3 ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-amber-200 text-amber-600 bg-amber-50"
-                        )}>
-                          {aiInsights.modelInfo.weights[2].toFixed(2)}
-                        </Badge>
-                      </div>
-                      <h4 className="text-sm font-bold text-foreground pt-1">Time-of-Day Alignment</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Influence of scheduling hour. {aiInsights.modelInfo.weights[2] >= 0.3
-                          ? "You are highly sensitive to scheduling at correct hours."
-                          : "Schedule timing has minimal impact on your success."}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Weight 3: Previous Task Success */}
-                  <div className="border rounded-2xl p-5 bg-background flex flex-col justify-between space-y-4 shadow-sm hover:border-primary/20 transition-all">
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Momentum Bias</span>
-                        <Badge variant="outline" className={cn("text-[10px] font-bold tracking-wider px-2", 
-                          aiInsights.modelInfo.weights[3] >= 0.2 ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-amber-200 text-amber-600 bg-amber-50"
-                        )}>
-                          {aiInsights.modelInfo.weights[3].toFixed(2)}
-                        </Badge>
-                      </div>
-                      <h4 className="text-sm font-bold text-foreground pt-1">Sequential Momentum</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Boost from the previous task. {aiInsights.modelInfo.weights[3] >= 0.2
-                          ? "A completed prior task strongly drives success on the next one."
-                          : "Prior task outcomes do not carry over to your next tasks."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -448,7 +370,7 @@ export default function Analysis() {
                           <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.15)" vertical={false} />
                       <XAxis dataKey="name" stroke="#666" fontSize={10} axisLine={false} tickLine={false} />
                       <YAxis stroke="#666" fontSize={10} axisLine={false} tickLine={false} domain={[0, 100]} />
                       <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
@@ -458,33 +380,49 @@ export default function Analysis() {
                 </CardContent>
               </Card>
 
-              <Card className="clean-card">
+              <Card className="clean-card flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <Brain className="w-5 h-5 text-primary" /> 
                     Completion Status
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={completionData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {completionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <CardContent className="flex flex-col items-center flex-1 pb-6">
+                  <div className="h-[230px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={completionData.filter(d => d.value > 0)}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => `${name}: ${value}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {completionData.filter(d => d.value > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  {/* Custom Legend showing all categories and live counts */}
+                  <div className="flex flex-wrap justify-center gap-5 text-xs font-bold pt-4 border-t w-full">
+                    {completionData.map((item) => {
+                      const emoji = item.name === 'Completed' ? '🟢' : item.name === 'Missed' ? '🔴' : '⚪';
+                      return (
+                        <div key={item.name} className="flex items-center gap-1.5">
+                          <span className="text-sm leading-none">{emoji}</span>
+                          <span className="text-muted-foreground">{item.name}:</span>
+                          <span className="font-extrabold text-foreground">{item.value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -501,7 +439,7 @@ export default function Analysis() {
                 <CardContent className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dailyTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.15)" vertical={false} />
                       <XAxis dataKey="name" stroke="#666" fontSize={10} axisLine={false} tickLine={false} />
                       <YAxis stroke="#666" fontSize={10} axisLine={false} tickLine={false} label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
                       <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />

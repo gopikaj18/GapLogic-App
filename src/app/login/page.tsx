@@ -33,11 +33,24 @@ export default function LoginPage() {
             setGoogleLoading(true);
             await loginWithGoogle(result.user.email, result.user.displayName || 'Google User');
             toast({ title: 'Success', description: 'Logged in with Google!' });
+            
+            // Check if we came from Android app
+            const params = new URLSearchParams(window.location.search);
+            const platform = params.get('platform');
+            if (platform === 'android') {
+              const token = localStorage.getItem('gaplogic_token');
+              if (token) {
+                window.location.href = `gaplogic://auth?token=${token}`;
+                return;
+              }
+            }
             router.push('/');
           }
         })
         .catch((error: any) => {
           console.error('[Google Redirect Error]', error);
+          // Silently ignore unauthorized-domain on IP-based origins (local dev on real device)
+          if (error?.code === 'auth/unauthorized-domain') return;
           toast({
             variant: 'destructive',
             title: 'Authentication Failed',
@@ -66,13 +79,28 @@ export default function LoginPage() {
         (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android);
 
       if (isWebView) {
-        await signInWithRedirect(auth, googleProvider);
+        // Redirect to external browser via custom Android intercept scheme
+        const authUrl = `${window.location.origin}/login?platform=android`;
+        window.location.href = `gaplogic-open-browser://${authUrl}`;
+        setGoogleLoading(false);
+        return;
       } else {
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
         if (user && user.email) {
           await loginWithGoogle(user.email, user.displayName || 'Google User');
           toast({ title: 'Success', description: 'Logged in with Google!' });
+          
+          // Check if we came from Android app
+          const params = new URLSearchParams(window.location.search);
+          const platform = params.get('platform');
+          if (platform === 'android') {
+            const token = localStorage.getItem('gaplogic_token');
+            if (token) {
+              window.location.href = `gaplogic://auth?token=${token}`;
+              return;
+            }
+          }
           router.push('/');
         } else {
           throw new Error('Google account credentials not found');

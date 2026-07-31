@@ -1,3 +1,5 @@
+import { handleOfflineRequest } from './offline-db';
+
 const TOKEN_STORAGE_KEY = 'gaplogic_token';
 
 export const getBaseUrl = () => {
@@ -8,7 +10,7 @@ export const getBaseUrl = () => {
   // For Android WebView development, use the local IP of your server
   // When deploying to production, replace this with your Railway URL
   const isAndroidWebView = typeof window !== 'undefined' && 
-    (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android);
+    (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android || (window as any).AndroidBridge);
   if (isAndroidWebView) {
     if (typeof window !== 'undefined') {
       if (window.location.protocol.startsWith('http')) {
@@ -41,6 +43,14 @@ export const getAuthToken = (): string | null => {
 };
 
 export const apiFetch = (path: string, options: RequestInit = {}) => {
+  // If running inside the Android wrapper, redirect API requests to LocalStorage
+  const isWebView = typeof window !== 'undefined' && 
+    (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android || (window as any).AndroidBridge);
+
+  if (isWebView && path.startsWith('/api')) {
+    return handleOfflineRequest(path, options);
+  }
+
   const baseUrl = getBaseUrl();
   const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
 

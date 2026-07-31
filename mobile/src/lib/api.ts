@@ -1,9 +1,18 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { getToken } from './storage';
 
 function getBaseUrl(): string {
   const env = process.env.EXPO_PUBLIC_API_URL;
   if (env) return env.replace(/\/$/, '');
+
+  // Development: auto-resolve to host IP address on Wi-Fi
+  const hostUri = Constants.expoConfig?.hostUri; // e.g. "192.168.1.100:8081"
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    return `http://${host}:9002`;
+  }
+
   if (Platform.OS === 'android') return 'http://10.0.2.2:9002';
   return 'http://localhost:9002';
 }

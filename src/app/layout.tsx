@@ -3,6 +3,8 @@ import './globals.css';
 import { DataProvider } from '@/lib/DataContext';
 import { SessionProvider } from '@/lib/SessionContext';
 import { Toaster } from '@/components/ui/toaster';
+import { NotificationManager } from '@/components/NotificationManager';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export const metadata: Metadata = {
   title: 'GapLogic | Analyze Behavior-Intention Discrepancies',
@@ -15,8 +17,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              const stored = localStorage.getItem('gaplogic-theme');
+              if (stored === 'light' || (!stored && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+              } else {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+              }
+            } catch (_) {}
+          })();
+        `}} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -26,6 +42,10 @@ export default function RootLayout({
           <DataProvider>
             {children}
             <Toaster />
+            <NotificationManager />
+            <div className="fixed top-6 right-6 z-40 md:top-8 md:right-10">
+              <NotificationBell />
+            </div>
           </DataProvider>
         </SessionProvider>
       </body>

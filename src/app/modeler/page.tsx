@@ -20,8 +20,10 @@ import { cn } from '@/lib/utils';
 
 export default function Modeler() {
   const { toast } = useToast();
-  const { intentions, loading, refresh } = useData();
+  const { intentions, logs, loading, refresh } = useData();
   const today = format(new Date(), 'yyyy-MM-dd');
+  
+  const hasEnoughHistory = logs ? logs.length >= 5 : false;
   
   const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -33,6 +35,10 @@ export default function Modeler() {
     estimatedDuration: 25,
     scheduledTime: format(new Date(), 'HH:mm'),
     date: today,
+    why: '',
+    confidence: 80,
+    priority: 'medium' as 'low' | 'medium' | 'high',
+    identity: '',
   });
 
   const [prediction, setPrediction] = useState<{
@@ -65,6 +71,10 @@ export default function Modeler() {
   }, []);
 
   const checkFeasibility = async () => {
+    if (!hasEnoughHistory) {
+      setPrediction(null);
+      return;
+    }
     if (!formData.title || formData.title.trim().length < 3) {
       setPrediction(null);
       return;
@@ -114,10 +124,23 @@ export default function Modeler() {
         estimatedDuration: formData.estimatedDuration,
         scheduledTime: formData.scheduledTime,
         date: formData.date,
+        why: formData.why,
+        confidence: formData.confidence,
+        priority: formData.priority,
+        identity: formData.identity,
       });
       await refresh();
       toast({ title: "Intention Locked", description: "Added to your behavioral stack." });
-      setFormData(prev => ({ ...prev, title: '', effortEstimate: 3, estimatedDuration: 25 }));
+      setFormData(prev => ({ 
+        ...prev, 
+        title: '', 
+        effortEstimate: 3, 
+        estimatedDuration: 25,
+        why: '',
+        confidence: 80,
+        priority: 'medium',
+        identity: '',
+      }));
     } catch (error: any) {
       console.error('[handleAdd]', error);
       toast({
@@ -220,21 +243,75 @@ export default function Modeler() {
                     />
                   </div>
                 </div>
-                <div className="space-y-8 flex flex-col justify-between lg:col-span-1">
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Predicted Effort Required</Label>
-                      <Badge variant="outline" className="border-primary/20 text-primary h-7 px-4 font-bold">{formData.effortEstimate}/5</Badge>
+                <div className="space-y-5 flex flex-col justify-between lg:col-span-1 border-t lg:border-t-0 lg:border-l lg:border-r lg:px-4 lg:border-dashed">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Predicted Effort Required</Label>
+                        <Badge variant="outline" className="border-primary/20 text-primary h-7 px-4 font-bold">{formData.effortEstimate}/5</Badge>
+                      </div>
+                      <Slider 
+                        value={[formData.effortEstimate]} 
+                        min={1} max={5} step={1} 
+                        onValueChange={([v]) => setFormData({...formData, effortEstimate: v})} 
+                        className="py-1"
+                      />
                     </div>
-                    <Slider 
-                      value={[formData.effortEstimate]} 
-                      min={1} max={5} step={1} 
-                      onValueChange={([v]) => setFormData({...formData, effortEstimate: v})} 
-                      className="py-4"
-                    />
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Priority Level</Label>
+                      <Select value={formData.priority} onValueChange={v => setFormData({...formData, priority: v as any})}>
+                        <SelectTrigger className="rounded-xl h-11 bg-background font-bold capitalize">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low Priority</SelectItem>
+                          <SelectItem value="medium">Medium Priority</SelectItem>
+                          <SelectItem value="high">High Priority</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Why Vault (Motivation)</Label>
+                      <Input 
+                        placeholder="e.g. I want to enter placements with confidence." 
+                        value={formData.why} onChange={e => setFormData({...formData, why: e.target.value})}
+                        className="rounded-xl h-11 bg-background text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vote Identity (Atomic Habits)</Label>
+                      <Input 
+                        placeholder="e.g. Athlete, Scholar, Engineer" 
+                        value={formData.identity} onChange={e => setFormData({...formData, identity: e.target.value})}
+                        className="rounded-xl h-11 bg-background text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Promise Confidence</Label>
+                        <Badge variant="outline" className="border-primary/20 text-primary h-7 px-4 font-bold">{formData.confidence}%</Badge>
+                      </div>
+                      <Slider 
+                        value={[formData.confidence]} 
+                        min={10} max={100} step={5} 
+                        onValueChange={([v]) => setFormData({...formData, confidence: v})} 
+                        className="py-1"
+                      />
+                      {formData.confidence < 50 && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl text-xs space-y-1">
+                          <p className="font-bold">⚠️ High Risk of Deviation</p>
+                          <p className="text-[11px] leading-relaxed opacity-90">Your confidence is low. Pro-Tip: Make the task smaller (e.g. do 5m instead of 25m) to build momentum.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                   <Button 
-                    className="w-full h-14 text-lg font-bold gap-3 rounded-xl shadow-lg shadow-primary/10" 
+                    className="w-full h-12 text-md font-bold gap-3 rounded-xl shadow-lg shadow-primary/10 mt-4" 
                     onClick={handleAdd} 
                     disabled={submitting}
                   >
@@ -270,6 +347,29 @@ export default function Modeler() {
                       <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
                         <Loader2 className="w-8 h-8 animate-spin text-primary opacity-60" />
                         <p className="text-xs text-muted-foreground">Auditing intention feasibility...</p>
+                      </div>
+                    ) : !hasEnoughHistory ? (
+                      <div className="py-16 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-6 space-y-3 bg-card/20">
+                        <Brain className="w-10 h-10 text-primary/40 animate-pulse" />
+                        <div>
+                          <p className="text-sm font-bold text-primary">Unlocking AI Feasibility</p>
+                          <p className="text-xs text-muted-foreground max-w-[220px] mx-auto mt-1.5 leading-relaxed">
+                            Not enough history yet. Complete a few tasks first — your AI Feasibility Check will unlock once you have 5 logged tasks.
+                          </p>
+                          <div className="mt-4 bg-muted px-3 py-1.5 rounded-full inline-block text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground border">
+                            {logs ? logs.length : 0} of 5 tasks logged
+                          </div>
+                        </div>
+                      </div>
+                    ) : !formData.title || formData.title.trim().length < 3 ? (
+                      <div className="py-16 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-6 space-y-3 bg-card/20">
+                        <Sparkles className="w-10 h-10 text-muted-foreground/40" />
+                        <div>
+                          <p className="text-sm font-bold">Feasibility Forecast</p>
+                          <p className="text-xs text-muted-foreground max-w-[200px] mx-auto mt-1 leading-relaxed">
+                            Enter a title to forecast completion feasibility.
+                          </p>
+                        </div>
                       </div>
                     ) : prediction ? (
                       activePredictTab === 'llm' ? (
@@ -510,9 +610,14 @@ export default function Modeler() {
                         </div>
                       )
                     ) : (
-                      <div className="py-12 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-4">
-                        <Sparkles className="w-8 h-8 text-muted-foreground opacity-40 mb-2" />
-                        <p className="text-xs text-muted-foreground font-medium">Enter a title to forecast completion feasibility</p>
+                      <div className="py-16 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-6 space-y-3 bg-card/20">
+                        <Sparkles className="w-10 h-10 text-muted-foreground/40 animate-pulse" />
+                        <div>
+                          <p className="text-sm font-bold">Feasibility Forecast</p>
+                          <p className="text-xs text-muted-foreground max-w-[200px] mx-auto mt-1 leading-relaxed">
+                            Enter a title to forecast completion feasibility.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

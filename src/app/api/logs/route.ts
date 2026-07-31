@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
       frictionNote,
       contextNote,
       date,
+      expectedEffort,
+      actualEnergy,
+      expectedEnergy,
+      moodBefore,
+      moodAfter,
+      distractions,
     } = body;
 
     if (!intentionId || !date) {
@@ -53,6 +59,12 @@ export async function POST(req: NextRequest) {
       frictionNote: String(frictionNote || ''),
       contextNote: String(contextNote || ''),
       date: String(date),
+      expectedEffort: expectedEffort !== undefined ? Number(expectedEffort) : 3,
+      actualEnergy: actualEnergy !== undefined ? Number(actualEnergy) : 3,
+      expectedEnergy: expectedEnergy !== undefined ? Number(expectedEnergy) : 3,
+      moodBefore: moodBefore ? String(moodBefore) : '',
+      moodAfter: moodAfter ? String(moodAfter) : '',
+      distractions: distractions ? String(distractions) : '',
     });
 
     return NextResponse.json({ log });
@@ -61,3 +73,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create log' }, { status: 500 });
   }
 }
+

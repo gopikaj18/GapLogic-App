@@ -23,20 +23,28 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "GapLogicMainActivity";
     
-    // Configurable URLs
-    // 10.0.2.2 is the special IP address that points to the host machine's loopback from the Android emulator.
-    // In production, change this to the deployed web application URL (e.g. https://gaplogic.vercel.app)
-    private static final String DEV_URL = "http://localhost:9002";
+    // DEV_URL points to the local HTTP server running natively inside the phone app
+    private static final String DEV_URL = "http://10.0.2.2:9002";
     
     private WebView webView;
     private ProgressBar progressBar;
     private LinearLayout errorLayout;
     private Button btnRetry;
     private boolean isError = false;
+    
+    private ServerSocket serverSocket;
+    private boolean isServerRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
         
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Start the local offline web server
+        startLocalServer();
 
         // Bind views
         webView = findViewById(R.id.webView);
@@ -78,6 +89,154 @@ public class MainActivity extends AppCompatActivity {
 
         // Load the web app URL
         loadAppUrl();
+
+        // Handle deep link if launched via intent
+        handleDeepLink(getIntent());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        isServerRunning = false;
+        if (serverSocket != null) {
+            try {
+                serverSocket.close();
+                Log.i(TAG, "Local offline server socket closed.");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to close server socket gracefully", e);
+            }
+        }
+    }
+
+    private void startLocalServer() {
+        isServerRunning = true;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    serverSocket = new ServerSocket(9002, 0, InetAddress.getByName("127.0.0.1"));
+                    Log.i(TAG, "Local offline server socket successfully running at http://127.0.0.1:9002");
+                    while (isServerRunning) {
+                        final Socket socket = serverSocket.accept();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                handleClientRequest(socket);
+                            }
+                        }).start();
+                    }
+                } catch (Exception e) {
+                    if (isServerRunning) {
+                        Log.e(TAG, "Local server socket execution encountered an error", e);
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private void handleClientRequest(Socket socket) {
+        try {
+            InputStream is = socket.getInputStream();
+            OutputStream os = socket.getOutputStream();
+            
+            // Parse HTTP Request Line (first line)
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+            String requestLine = reader.readLine();
+            if (requestLine == null) {
+                socket.close();
+                return;
+            }
+            
+            String[] tokens = requestLine.split(" ");
+            if (tokens.length < 2) {
+                socket.close();
+                return;
+            }
+            
+            String path = tokens[1];
+            // Remove query string if present
+            int queryIndex = path.indexOf('?');
+            if (queryIndex > -1) {
+                path = path.substring(0, queryIndex);
+            }
+            
+            // Map default route to index.html
+            if (path.equals("/")) {
+                path = "/index.html";
+            }
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            
+            InputStream fileStream = null;
+            String mime = "text/html";
+            try {
+                fileStream = getAssets().open("www/" + path);
+                if (path.endsWith(".js")) mime = "application/javascript";
+                else if (path.endsWith(".css")) mime = "text/css";
+                else if (path.endsWith(".png")) mime = "image/png";
+                else if (path.endsWith(".jpg") || path.endsWith(".jpeg")) mime = "image/jpeg";
+                else if (path.endsWith(".svg")) mime = "image/svg+xml";
+                else if (path.endsWith(".json")) mime = "application/json";
+            } catch (IOException e) {
+                // Fallback to index.html to support React/Next Router client-side routing
+                try {
+                    fileStream = getAssets().open("www/index.html");
+                    mime = "text/html";
+                } catch (IOException ex) {
+                    String response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                    os.write(response.getBytes());
+                    os.flush();
+                    socket.close();
+                    return;
+                }
+            }
+            
+            int length = fileStream.available();
+            String header = "HTTP/1.1 200 OK\r\nContent-Type: " + mime + "\r\nContent-Length: " + length + "\r\nConnection: close\r\n\r\n";
+            os.write(header.getBytes());
+            
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = fileStream.read(buffer)) != -1) {
+                os.write(buffer, 0, read);
+            }
+            
+            fileStream.close();
+            os.flush();
+            socket.close();
+        } catch (Exception e) {
+            Log.e(TAG, "Error processing client request", e);
+            try { socket.close(); } catch (Exception ignored) {}
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void handleDeepLink(Intent intent) {
+        if (intent == null) return;
+        Uri data = intent.getData();
+        if (data != null && "gaplogic".equals(data.getScheme())) {
+            String token = data.getQueryParameter("token");
+            if (token != null && !token.isEmpty()) {
+                Log.d(TAG, "Deep Link Token received: " + token);
+                // Inject the token into localStorage and reload/redirect to dashboard
+                webView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "localStorage.setItem('gaplogic_token', '" + token + "'); window.location.href = '/';",
+                            null
+                        );
+                    }
+                });
+            }
+        }
     }
 
     private void setupWebView() {
@@ -144,6 +303,29 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                
+                // Detect requests that should open in the system browser
+                if (url.contains("open_external=true") || url.startsWith("gaplogic-open-browser://")) {
+                    String realUrl = url;
+                    if (url.startsWith("gaplogic-open-browser://")) {
+                        realUrl = url.substring("gaplogic-open-browser://".length());
+                        // Fix colon stripping by Android WebView URL parser
+                        if (realUrl.startsWith("http//")) {
+                            realUrl = "http://" + realUrl.substring(6);
+                        } else if (realUrl.startsWith("https//")) {
+                            realUrl = "https://" + realUrl.substring(7);
+                        }
+                    }
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(realUrl));
+                        startActivity(intent);
+                        return true;
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to launch external browser for URL: " + realUrl, e);
+                        return false;
+                    }
+                }
+                
                 if (url.startsWith("http://") || url.startsWith("https://")) {
                     return false; // let WebView handle it
                 }
@@ -201,19 +383,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isNetworkAvailable() {
-        try {
-            ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null) {
-                NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-                if (capabilities != null) {
-                    return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                           capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                           capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
-                }
-            }
-        } catch (SecurityException e) {
-            Log.e(TAG, "SecurityException checking network availability: " + e.getMessage());
-        }
-        return false;
+        return true; // Local server doesn't require an active external network
     }
 }
