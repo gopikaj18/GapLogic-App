@@ -82,10 +82,7 @@ export default function LoginPage() {
 
       if (isWebView) {
         // Redirect to external browser via custom Android intercept scheme
-        // Use production Firebase Hosting URL for external Google authentication
-        // to prevent sessionStorage partitioning issues on insecure local HTTP/IP origins in Chrome
-        const productionDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'gaplogic-20118.firebaseapp.com';
-        const authUrl = `https://${productionDomain}/login?platform=android`;
+        const authUrl = `${window.location.origin}/login?platform=android`;
         window.location.href = `gaplogic-open-browser://${authUrl}`;
         setGoogleLoading(false);
         return;
