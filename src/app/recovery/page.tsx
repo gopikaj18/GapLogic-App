@@ -343,16 +343,16 @@ export default function RecoveryCenter() {
         <Card className="clean-card p-8 bg-card/60 backdrop-blur border-primary/10 space-y-8 relative overflow-hidden">
           
           {/* Progress Indicators */}
-          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b pb-4">
-            <span className={activeStep >= 1 ? 'text-primary' : ''}>1. Acknowledge</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className={activeStep >= 2 ? 'text-primary' : ''}>2. Reset</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className={activeStep >= 3 ? 'text-primary' : ''}>3. Tiny Action</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className={activeStep >= 4 ? 'text-primary' : ''}>4. Recover</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className={activeStep >= 5 ? 'text-primary' : ''}>5. Momentum</span>
+          <div className="flex items-center gap-1.5 md:gap-3 overflow-x-auto scrollbar-none pb-4 border-b text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest text-muted-foreground justify-start md:justify-between whitespace-nowrap">
+            <span className={`flex-shrink-0 ${activeStep >= 1 ? 'text-primary' : ''}`}>1. Acknowledge</span>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className={`flex-shrink-0 ${activeStep >= 2 ? 'text-primary' : ''}`}>2. Reset</span>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className={`flex-shrink-0 ${activeStep >= 3 ? 'text-primary' : ''}`}>3. Tiny Action</span>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className={`flex-shrink-0 ${activeStep >= 4 ? 'text-primary' : ''}`}>4. Recover</span>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className={`flex-shrink-0 ${activeStep >= 5 ? 'text-primary' : ''}`}>5. Momentum</span>
           </div>
 
           {/* STEP 1: ACKNOWLEDGE */}
