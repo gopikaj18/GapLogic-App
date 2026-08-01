@@ -76,11 +76,16 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       const isWebView = typeof window !== 'undefined' && 
-        (navigator.userAgent.includes('GapLogicAndroid') || (window as any).Android);
+        (navigator.userAgent.includes('GapLogicAndroid') || 
+         navigator.userAgent.includes('GapLogicMobile') || 
+         (window as any).Android);
 
       if (isWebView) {
         // Redirect to external browser via custom Android intercept scheme
-        const authUrl = `${window.location.origin}/login?platform=android`;
+        // Use production Firebase Hosting URL for external Google authentication
+        // to prevent sessionStorage partitioning issues on insecure local HTTP/IP origins in Chrome
+        const productionDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'gaplogic-20118.firebaseapp.com';
+        const authUrl = `https://${productionDomain}/login?platform=android`;
         window.location.href = `gaplogic-open-browser://${authUrl}`;
         setGoogleLoading(false);
         return;

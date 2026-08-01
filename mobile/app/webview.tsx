@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity, BackHandler, Platform, SafeAreaView } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity, BackHandler, Platform, SafeAreaView, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { StatusBar } from 'expo-status-bar';
 
@@ -51,6 +51,25 @@ export default function WebViewScreen() {
             onNavigationStateChange={(navState) => {
               setCanGoBack(navState.canGoBack);
               setLoading(navState.loading);
+            }}
+            onShouldStartLoadWithRequest={(request) => {
+              const { url } = request;
+              if (url.startsWith('gaplogic-open-browser://') || url.includes('open_external=true')) {
+                let realUrl = url;
+                if (url.startsWith('gaplogic-open-browser://')) {
+                  realUrl = url.substring('gaplogic-open-browser://'.length);
+                  if (realUrl.startsWith('http//')) {
+                    realUrl = 'http://' + realUrl.substring(6);
+                  } else if (realUrl.startsWith('https//')) {
+                    realUrl = 'https://' + realUrl.substring(7);
+                  }
+                }
+                Linking.openURL(realUrl).catch((err) =>
+                  console.error('Failed to open external URL:', err)
+                );
+                return false;
+              }
+              return true;
             }}
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}

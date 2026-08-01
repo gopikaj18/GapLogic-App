@@ -52,7 +52,7 @@ export default function FocusTimer() {
   const [submitting, setSubmitting] = useState(false);
   const [predicting, setPredicting] = useState(false);
   const [prediction, setPrediction] = useState<PredictBehavioralOutcomeOutput | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<any>(null);
 
   const [feedback, setFeedback] = useState({
     completed: true,

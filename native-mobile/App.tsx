@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity, BackHandler, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity, BackHandler, Platform, SafeAreaView, StatusBar, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-// Dev target pointing to Next.js dev server on the host machine's local Wi-Fi IP
-// 192.168.29.53 = this computer's LAN address (works on real physical phones on same Wi-Fi)
-const DEV_URL = 'http://192.168.29.53:9002';
-const TARGET_URL = DEV_URL;
+// Live production URL - works anywhere, any network, any time!
+const TARGET_URL = 'https://gap-logic-app.vercel.app';
 
 export default function App() {
   const webViewRef = useRef<any>(null);
@@ -50,6 +48,25 @@ export default function App() {
             onNavigationStateChange={(navState: any) => {
               setCanGoBack(navState.canGoBack);
               setLoading(navState.loading);
+            }}
+            onShouldStartLoadWithRequest={(request) => {
+              const { url } = request;
+              if (url.startsWith('gaplogic-open-browser://') || url.includes('open_external=true')) {
+                let realUrl = url;
+                if (url.startsWith('gaplogic-open-browser://')) {
+                  realUrl = url.substring('gaplogic-open-browser://'.length);
+                  if (realUrl.startsWith('http//')) {
+                    realUrl = 'http://' + realUrl.substring(6);
+                  } else if (realUrl.startsWith('https//')) {
+                    realUrl = 'https://' + realUrl.substring(7);
+                  }
+                }
+                Linking.openURL(realUrl).catch((err) =>
+                  console.error('Failed to open external URL:', err)
+                );
+                return false;
+              }
+              return true;
             }}
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
