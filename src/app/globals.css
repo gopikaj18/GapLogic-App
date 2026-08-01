@@ -105,3 +105,18 @@
   scrollbar-color: hsl(var(--border)) hsl(var(--background));
 }
 
+/* Mobile WebView Wrapper App Layout Overrides */
+html.is-webview body {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 60px) !important;
+}
+
+html.is-webview .global-notification-bell {
+  display: none !important;
+}
+
+html.is-webview main {
+  margin-bottom: 0 !important;
+  padding-bottom: 2rem !important; /* Standard spacing at the bottom after bottom-bar removal */
+}
+
+

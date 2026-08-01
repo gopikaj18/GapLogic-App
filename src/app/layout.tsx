@@ -19,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
@@ -29,6 +30,12 @@ export default function RootLayout({
               } else {
                 document.documentElement.classList.add('dark');
                 document.documentElement.classList.remove('light');
+              }
+              
+              // Detect mobile app WebView environments
+              const ua = navigator.userAgent || '';
+              if (ua.includes('GapLogicAndroid') || ua.includes('GapLogicMobile') || window.Android) {
+                document.documentElement.classList.add('is-webview');
               }
             } catch (_) {}
           })();
@@ -43,7 +50,7 @@ export default function RootLayout({
             {children}
             <Toaster />
             <NotificationManager />
-            <div className="fixed top-6 right-6 z-40 md:top-8 md:right-10">
+            <div className="global-notification-bell fixed top-6 right-6 z-40 md:top-8 md:right-10">
               <NotificationBell />
             </div>
           </DataProvider>
