@@ -48,6 +48,7 @@ export default function WebViewScreen() {
             source={{ uri: TARGET_URL }}
             style={styles.webview}
             userAgent="GapLogicMobile"
+            originWhitelist={['*']}
             onNavigationStateChange={(navState) => {
               setCanGoBack(navState.canGoBack);
               setLoading(navState.loading);

@@ -45,6 +45,7 @@ export default function App() {
             source={{ uri: TARGET_URL }}
             style={styles.webview}
             userAgent="GapLogicMobile"
+            originWhitelist={['*']}
             onNavigationStateChange={(navState: any) => {
               setCanGoBack(navState.canGoBack);
               setLoading(navState.loading);
